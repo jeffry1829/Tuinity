@@ -6,7 +6,7 @@ Subject: [PATCH] async water
 
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..4ca674b58f37839d13d7219c654ed0b728a27ee2
+index 0000000000000000000000000000000000000000..a99464533e8d4902c4bc139e9cefbc195bf7fe46
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 @@ -0,0 +1,94 @@
@@ -17,7 +17,7 @@ index 0000000000000000000000000000000000000000..4ca674b58f37839d13d7219c654ed0b7
 +import java.util.Iterator;
 +
 +public class AsyncFluid implements Runnable {
-+    volatile public TickListServer<FluidType> self;
++    volatile public static TickListServer<FluidType> self;
 +    volatile public static long allowedTick=0, ticked=0;
 +    public AsyncFluid(TickListServer<FluidType> self){
 +        this.self=self;
