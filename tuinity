@@ -65,6 +65,22 @@ case "$1" in
        ./scripts/paperclip.sh
     )
     ;;
+    "FASTjar" | "FASTpaperclip")
+    (
+       basedir
+       cd "$basedir"
+       if [ "$2" != "fast" ]; then
+          scripts/upstream.sh
+       fi
+       ./scripts/apply.sh "$basedir"
+       cd "$basedir"
+       mvn -N install -DskipTests=true
+       cd ${FORK_NAME}-API
+       mvn -e clean install -DskipTests=true && cd ../${FORK_NAME}-Server && mvn -e clean install -DskipTests=true
+       cd "$basedir"
+       ./scripts/paperclip.sh
+    )
+    ;;
     "d" | "de" | "deploy")
     (
         basedir
