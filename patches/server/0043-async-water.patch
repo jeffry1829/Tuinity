@@ -6,10 +6,10 @@ Subject: [PATCH] async water
 
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..2397b63967e9c675a07583622d6a674e628e14f7
+index 0000000000000000000000000000000000000000..4ca674b58f37839d13d7219c654ed0b728a27ee2
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,94 @@
 +package com.tuinity.tuinity;
 +
 +import net.minecraft.server.*;
@@ -17,7 +17,7 @@ index 0000000000000000000000000000000000000000..2397b63967e9c675a07583622d6a674e
 +import java.util.Iterator;
 +
 +public class AsyncFluid implements Runnable {
-+    volatile TickListServer<FluidType> self;
++    volatile public TickListServer<FluidType> self;
 +    volatile public static long allowedTick=0, ticked=0;
 +    public AsyncFluid(TickListServer<FluidType> self){
 +        this.self=self;
@@ -26,8 +26,73 @@ index 0000000000000000000000000000000000000000..2397b63967e9c675a07583622d6a674e
 +    public void run() {
 +        while(true){
 +            if (allowedTick > ticked){
-+                WorldServer.LOGGER.warn("Inner per_AsyncEntityFluid "+ticked);
-+                tick();
++                //WorldServer.LOGGER.warn("Inner per_AsyncEntityFluid "+ticked);
++                //tick();
++                
++                // Paper end
++                int i = self.nextTickList.size();
++
++                if (false) { // CraftBukkit
++                    throw new IllegalStateException("TickNextTick list out of sync");
++                } else {
++                    if (i > 65536) {
++                        // CraftBukkit start - If the server has too much to process over time, try to alleviate that
++                        if (i > 20 * 65536) {
++                            i = i / 20;
++                        } else {
++                            i = 65536;
++                        }
++                        // CraftBukkit end
++                    }
++
++                    ChunkProviderServer chunkproviderserver = self.f.getChunkProvider();
++                    Iterator<NextTickListEntry<FluidType>> iterator = self.nextTickList.iterator();
++
++                    //self.f.getMethodProfiler().enter("cleaning");
++
++                    //this.timingCleanup.startTiming(); // Paper
++                    NextTickListEntry nextticklistentry;
++
++                    while (i > 0 && iterator.hasNext()) {
++                        nextticklistentry = (NextTickListEntry) iterator.next();
++                        if (nextticklistentry.b > self.f.getTime()) {
++                            break;
++                        }
++
++                        if (chunkproviderserver.a(nextticklistentry.a)) {
++                            iterator.remove();
++                            self.nextTickListHash.remove(nextticklistentry);
++                            self.g.add(nextticklistentry);
++                            --i;
++                        }
++                    }
++                    //this.timingCleanup.stopTiming(); // Paper
++
++                    //this.timingTicking.startTiming(); // Paper
++                    //self.f.getMethodProfiler().exitEnter("ticking");
++
++                    while ((nextticklistentry = (NextTickListEntry) self.g.poll()) != null) {
++                        if (chunkproviderserver.a(nextticklistentry.a)) {
++                            try {
++                                self.h.add(nextticklistentry);
++                                self.i.accept(nextticklistentry);
++                            } catch (Throwable throwable) {
++                                CrashReport crashreport = CrashReport.a(throwable, "Exception while ticking");
++                                CrashReportSystemDetails crashreportsystemdetails = crashreport.a("Block being ticked");
++
++                                CrashReportSystemDetails.a(crashreportsystemdetails, nextticklistentry.a, (IBlockData) null);
++                                throw new ReportedException(crashreport);
++                            }
++                        } else {
++                            self.a(nextticklistentry.a, (FluidType) nextticklistentry.b(), 0); // CraftBukkit - decompile error
++                        }
++                    }
++
++                    //self.f.getMethodProfiler().exit();
++                    //this.timingTicking.stopTiming(); // Paper
++                    self.h.clear();
++                    self.g.clear();
++                }
 +                ticked++;
 +            }else{
 +                try {Thread.sleep(10);} catch (InterruptedException e) {e.printStackTrace();}
@@ -36,70 +101,7 @@ index 0000000000000000000000000000000000000000..2397b63967e9c675a07583622d6a674e
 +    }
 +
 +    public void tick() {
-+        // Paper end
-+        int i = self.nextTickList.size();
 +
-+        if (false) { // CraftBukkit
-+            throw new IllegalStateException("TickNextTick list out of sync");
-+        } else {
-+            if (i > 65536) {
-+                // CraftBukkit start - If the server has too much to process over time, try to alleviate that
-+                if (i > 20 * 65536) {
-+                    i = i / 20;
-+                } else {
-+                    i = 65536;
-+                }
-+                // CraftBukkit end
-+            }
-+
-+            ChunkProviderServer chunkproviderserver = self.f.getChunkProvider();
-+            Iterator<NextTickListEntry<FluidType>> iterator = self.nextTickList.iterator();
-+
-+            //self.f.getMethodProfiler().enter("cleaning");
-+
-+            //this.timingCleanup.startTiming(); // Paper
-+            NextTickListEntry nextticklistentry;
-+
-+            while (i > 0 && iterator.hasNext()) {
-+                nextticklistentry = (NextTickListEntry) iterator.next();
-+                if (nextticklistentry.b > self.f.getTime()) {
-+                    break;
-+                }
-+
-+                if (chunkproviderserver.a(nextticklistentry.a)) {
-+                    iterator.remove();
-+                    self.nextTickListHash.remove(nextticklistentry);
-+                    self.g.add(nextticklistentry);
-+                    --i;
-+                }
-+            }
-+            //this.timingCleanup.stopTiming(); // Paper
-+
-+            //this.timingTicking.startTiming(); // Paper
-+            //self.f.getMethodProfiler().exitEnter("ticking");
-+
-+            while ((nextticklistentry = (NextTickListEntry) self.g.poll()) != null) {
-+                if (chunkproviderserver.a(nextticklistentry.a)) {
-+                    try {
-+                        self.h.add(nextticklistentry);
-+                        self.i.accept(nextticklistentry);
-+                    } catch (Throwable throwable) {
-+                        CrashReport crashreport = CrashReport.a(throwable, "Exception while ticking");
-+                        CrashReportSystemDetails crashreportsystemdetails = crashreport.a("Block being ticked");
-+
-+                        CrashReportSystemDetails.a(crashreportsystemdetails, nextticklistentry.a, (IBlockData) null);
-+                        throw new ReportedException(crashreport);
-+                    }
-+                } else {
-+                    self.a(nextticklistentry.a, (FluidType) nextticklistentry.b(), 0); // CraftBukkit - decompile error
-+                }
-+            }
-+
-+            //self.f.getMethodProfiler().exit();
-+            //this.timingTicking.stopTiming(); // Paper
-+            self.h.clear();
-+            self.g.clear();
-+        }
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/FluidTypeFlowing.java b/src/main/java/net/minecraft/server/FluidTypeFlowing.java
@@ -155,7 +157,7 @@ index 3f1aa5ced697490b5481ba992cf5af5dc98b8166..1288cdf4723baa455a566d7ff7cf46c8
  
      public int a() {
 diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
-index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..a178e99f0cfccf41e5552199cf3e2ee4d5b37ba5 100644
+index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..bd62d032e479a23c4e13fab6323f570e96235811 100644
 --- a/src/main/java/net/minecraft/server/WorldServer.java
 +++ b/src/main/java/net/minecraft/server/WorldServer.java
 @@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
@@ -180,12 +182,12 @@ index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..a178e99f0cfccf41e5552199cf3e2ee4
      private final ObjectLinkedOpenHashSet<BlockActionData> I;
      private boolean ticking;
 +
-+    public static AsyncFluid asyncFluid=null;
++    volatile public static AsyncFluid asyncFluid=null;
 +
      @Nullable
      private final MobSpawnerTrader mobSpawnerTrader;
  
-@@ -449,7 +453,13 @@ public class WorldServer extends World {
+@@ -449,7 +453,14 @@ public class WorldServer extends World {
          timings.scheduledBlocks.startTiming(); // Spigot
          if (this.worldData.getType() != WorldType.DEBUG_ALL_BLOCK_STATES) {
              this.nextTickListBlock.b();
@@ -195,6 +197,7 @@ index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..a178e99f0cfccf41e5552199cf3e2ee4
 +                asyncFluid=new AsyncFluid(this.nextTickListFluid);
 +                new Thread(asyncFluid).start();
 +            }
++            asyncFluid.self=this.nextTickListFluid;
 +            //this.nextTickListFluid.b();
 +            AsyncFluid.allowedTick++;
          }
