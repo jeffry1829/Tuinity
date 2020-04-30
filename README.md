@@ -76,3 +76,85 @@ for the license of material used/modified by this project.
 ### Note
 
 The fork is based off of aikar's EMC framework found [here](https://github.com/starlis/empirecraft)
+
+### Tuinity環境
+```
+# import Foo
+import IWorldInventory
+import Clearable
+import IHopper
+import Material
+import IInventoryHolder
+import MaterialMapColor
+import Blocks
+```
+
+### Some script things
+```
+./tuinity FASTjar fast
+```
+
+### Manual method (Edit patch)
+In case you need something more complex or want more control, this step-by-step instruction does
+exactly what the above slightly automated system does.
+
+1. If you have changes you are working on type `git stash` to store them for later.
+   - Later you can type `git stash pop` to get them back.
+2. Type `git rebase -i upstream/upstream`
+   - It should show something like [this](https://gist.github.com/zachbr/21e92993cb99f62ffd7905d7b02f3159).
+3. Replace `pick` with `edit` for the commit/patch you want to modify, and "save" the changes.
+   - Only do this for one commit at a time.
+4. Make the changes you want to make to the patch.
+5. Type `git add .` to add your changes.
+6. Type `git commit --amend` to commit.
+   - **MAKE SURE TO ADD `--amend`** or else a new patch will be created.
+   - You can also modify the commit message here.
+7. Type `git rebase --continue` to finish rebasing.
+8. Type `./paper rebuild` in the main directory.
+   - This will modify the appropriate patches based on your commits.
+9. PR your modifications back to this project.
+
+### Code分析
+```
+#WorldServer.java
+1. private final TickListServer<FluidType> nextTickListFluid; 
+^ List
+2. this.nextTickListFluid = new com.destroystokyo.paper.server.ticklist.PaperTickList<>(this, (fluidtype) -> { // Paper - optimise TickListServer
+            return fluidtype == null || fluidtype == FluidTypes.EMPTY;
+        }, IRegistry.FLUID::getKey, IRegistry.FLUID::get, this::a, "Fluids"); // Paper - Timings
+^ 新的PaperTickList<T>物件，傳入判斷fluid是否要加入tickList的Predicate和如何tick的Consumer
+，PaperTickList<T>本身有tick()函式，PaperTickList<T> extends TickListServer<T>
+3. this.nextTickListFluid.b();
+^ 此行出現在WorldServer#doTick裡，已經有分離Fluid和一般Block的Tick了。b()只是tick()的混淆
+注意：PaperTickList裡並沒有b()函式
+定義：TickListServer<FluidType> nextTickListFluid;
+4. ((com.destroystokyo.paper.server.ticklist.PaperTickList)this.nextTickListFluid).onChunkSetTicking(chunkX, chunkZ);
+^ Paper看來已經重寫過ticklist server到PaperTickList裡了。
+注意：onChunkSetTicking內有async catcher,但是經過搜尋，似乎FluidTypeFlowing裡面並沒有呼叫
+
+#TickListServer<T>.java
+1. public void schedule(BlockPosition blockposition, T t0, int i, TickListPriority ticklistpriority) {
+^ 裡面包含了Fluid的Predicate的.test()
+2. private void a(NextTickListEntry<T> nextticklistentry) {
+        if (!this.nextTickListHash.contains(nextticklistentry)) {
+            this.nextTickListHash.add(nextticklistentry);
+            this.nextTickList.add(nextticklistentry);
+        }
+    }
+^ (1.)裡呼叫的函式，TickListServer本身是泛型Class，我們處理的T==FluidType
+
+#FluidTypeFlowing.java
+以下是tick的順序
+1.
+@Override
+public void a(World world, BlockPosition blockposition, Fluid fluid) {
+2.
+protected void a(GeneratorAccess generatoraccess, BlockPosition blockposition, Fluid fluid) {
+^ 裡頭包含了spread DOWN和spread to sides
+```
+
+### Code寫法
+Comment掉WorldServer#this.nextTickListFluid.b();
+改為一個counter，給AsyncFluid.java(自定義Class)用。
+AsyncFluid內貼上TickListServer\<T\>的Code
+處理async catcher(把Event改成async event)
