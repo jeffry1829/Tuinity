@@ -6,10 +6,10 @@ Subject: [PATCH] async water
 
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..cd4e6213c6ac1ee059fa00b8399c1c5b91d93031
+index 0000000000000000000000000000000000000000..35cc88e9b4258ee6078bd0b336758cc2e1506888
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,107 @@
 +package com.tuinity.tuinity;
 +
 +import net.minecraft.server.*;
@@ -22,12 +22,16 @@ index 0000000000000000000000000000000000000000..cd4e6213c6ac1ee059fa00b8399c1c5b
 +    public AsyncFluid(WorldServer self){
 +        this.self=self;
 +    }
++    
 +    @Override
 +    public void run() {
 +        while(true){
 +            if (allowedTick > ticked){
 +                //WorldServer.LOGGER.warn("Inner per_AsyncEntityFluid "+ticked);
-+                int i = self.nextTickListFluid.nextTickList.size();
++                int i;
++                synchronized (self.getFluidTickList().nextTickList){
++                    i = self.getFluidTickList().nextTickList.size();
++                }
 +                WorldServer.LOGGER.warn("Inner per_AsyncEntityFluid "+i);
 +                if (false) { // CraftBukkit
 +                    throw new IllegalStateException("TickNextTick list out of sync");
@@ -41,10 +45,12 @@ index 0000000000000000000000000000000000000000..cd4e6213c6ac1ee059fa00b8399c1c5b
 +                        }
 +                        // CraftBukkit end
 +                    }
-+
-+                    ChunkProviderServer chunkproviderserver = self.nextTickListFluid.f.getChunkProvider();
-+                    Iterator<NextTickListEntry<FluidType>> iterator = self.nextTickListFluid.nextTickList.iterator();
-+
++                    ChunkProviderServer chunkproviderserver;
++                    Iterator<NextTickListEntry<FluidType>> iterator;
++                    synchronized (self.getFluidTickList()) {
++                        chunkproviderserver = self.getFluidTickList().f.getChunkProvider();
++                        iterator = self.getFluidTickList().nextTickList.iterator();
++                    }
 +                    //self.f.getMethodProfiler().enter("cleaning");
 +
 +                    //this.timingCleanup.startTiming(); // Paper
@@ -53,15 +59,16 @@ index 0000000000000000000000000000000000000000..cd4e6213c6ac1ee059fa00b8399c1c5b
 +                    while (i > 0 && iterator.hasNext()) {
 +                        WorldServer.LOGGER.warn("Inner iterator");
 +                        nextticklistentry = (NextTickListEntry) iterator.next();
-+                        if (nextticklistentry.b > self.nextTickListFluid.f.getTime()) {
-+                            break;
-+                        }
-+
-+                        if (chunkproviderserver.a(nextticklistentry.a)) {
-+                            iterator.remove();
-+                            self.nextTickListFluid.nextTickListHash.remove(nextticklistentry);
-+                            self.nextTickListFluid.g.add(nextticklistentry);
-+                            --i;
++                        synchronized (self.getFluidTickList()) {
++                            if (nextticklistentry.b > self.getFluidTickList().f.getTime()) {
++                                break;
++                            }
++                            if (chunkproviderserver.a(nextticklistentry.a)) {
++                                iterator.remove();
++                                self.getFluidTickList().nextTickListHash.remove(nextticklistentry);
++                                self.getFluidTickList().g.add(nextticklistentry);
++                                --i;
++                            }
 +                        }
 +                    }
 +                    //this.timingCleanup.stopTiming(); // Paper
@@ -69,12 +76,14 @@ index 0000000000000000000000000000000000000000..cd4e6213c6ac1ee059fa00b8399c1c5b
 +                    //this.timingTicking.startTiming(); // Paper
 +                    //self.f.getMethodProfiler().exitEnter("ticking");
 +
-+                    while ((nextticklistentry = (NextTickListEntry) self.nextTickListFluid.g.poll()) != null) {
++                    while ((nextticklistentry = (NextTickListEntry) self.getFluidTickList().g.poll()) != null) {
 +                        if (chunkproviderserver.a(nextticklistentry.a)) {
 +                            WorldServer.LOGGER.warn("Inner ticking ready");
 +                            try {
-+                                self.nextTickListFluid.h.add(nextticklistentry);
-+                                self.nextTickListFluid.i.accept(nextticklistentry);
++                                synchronized (self.getFluidTickList()) {
++                                    self.getFluidTickList().h.add(nextticklistentry);
++                                    self.getFluidTickList().i.accept(nextticklistentry);
++                                }
 +                            } catch (Throwable throwable) {
 +                                CrashReport crashreport = CrashReport.a(throwable, "Exception while ticking");
 +                                CrashReportSystemDetails crashreportsystemdetails = crashreport.a("Block being ticked");
@@ -84,14 +93,18 @@ index 0000000000000000000000000000000000000000..cd4e6213c6ac1ee059fa00b8399c1c5b
 +                            }
 +                        } else {
 +                            WorldServer.LOGGER.warn("Inner NOT ticking ready");
-+                            self.nextTickListFluid.a(nextticklistentry.a, (FluidType) nextticklistentry.b(), 0); // CraftBukkit - decompile error
++                            synchronized (self.getFluidTickList()) {
++                                self.getFluidTickList().a(nextticklistentry.a, (FluidType) nextticklistentry.b(), 0); // CraftBukkit - decompile error
++                            }
 +                        }
 +                    }
 +                    WorldServer.LOGGER.warn("out");
 +                    //self.f.getMethodProfiler().exit();
 +                    //this.timingTicking.stopTiming(); // Paper
-+                    self.nextTickListFluid.h.clear();
-+                    self.nextTickListFluid.g.clear();
++                    synchronized (self.getFluidTickList()) {
++                        self.getFluidTickList().h.clear();
++                        self.getFluidTickList().g.clear();
++                    }
 +                }
 +                ticked++;
 +            }else{
