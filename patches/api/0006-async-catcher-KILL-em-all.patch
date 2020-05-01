@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jeffry1829 <jeffry1829@gmail.com>
+Date: Fri, 1 May 2020 21:06:10 +0800
+Subject: [PATCH] async catcher KILL'em all
+
+
+diff --git a/src/main/java/org/bukkit/plugin/SimplePluginManager.java b/src/main/java/org/bukkit/plugin/SimplePluginManager.java
+index 4931bc86d44cd697d458d6e365c3b8030ea8285d..50879321bf2a278cf9b244bd04be6f35a2f84abc 100644
+--- a/src/main/java/org/bukkit/plugin/SimplePluginManager.java
++++ b/src/main/java/org/bukkit/plugin/SimplePluginManager.java
+@@ -589,11 +589,11 @@ public final class SimplePluginManager implements PluginManager {
+     @Override
+     public void callEvent(@NotNull Event event) {
+         // Paper - replace callEvent by merging to below method
+-        if (event.isAsynchronous() && server.isPrimaryThread()) {
++        /*if (event.isAsynchronous() && server.isPrimaryThread()) {
+             throw new IllegalStateException(event.getEventName() + " may only be triggered asynchronously.");
+         } else if (!event.isAsynchronous() && !server.isPrimaryThread() && !server.isStopping() ) {
+             throw new IllegalStateException(event.getEventName() + " may only be triggered synchronously.");
+-        }
++        }*/
+ 
+         HandlerList handlers = event.getHandlers();
+         RegisteredListener[] listeners = handlers.getRegisteredListeners();
