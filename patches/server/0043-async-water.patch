@@ -4,14 +4,113 @@ Date: Wed, 29 Apr 2020 20:59:57 +0800
 Subject: [PATCH] async water
 
 
+diff --git a/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java b/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
+index a08bfb4b3b02e998d3a6f519107e522fc58496eb..4ca62d132792ba108a9aa53cd2bc093fbf99758b 100644
+--- a/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
++++ b/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
+@@ -41,13 +41,13 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+     public static final int STATE_TICKED         = 1 << 4; // after this, it gets thrown back to unscheduled
+     public static final int STATE_CANCELLED_TICK = 1 << 5; // still gets moved to unscheduled after tick
+ 
+-    private static final int SHORT_SCHEDULE_TICK_THRESHOLD = 20 * 20 + 1; // 20 seconds
++    public static final int SHORT_SCHEDULE_TICK_THRESHOLD = 20 * 20 + 1; // 20 seconds
+ 
+-    private final WorldServer world;
+-    private final Predicate<T> excludeFromScheduling;
+-    private final Function<T, MinecraftKey> getMinecraftKeyFrom;
+-    private final Function<MinecraftKey, T> getObjectFronMinecraftKey;
+-    private final Consumer<NextTickListEntry<T>> tickFunction;
++    public final WorldServer world;
++    public final Predicate<T> excludeFromScheduling;
++    public final Function<T, MinecraftKey> getMinecraftKeyFrom;
++    public final Function<MinecraftKey, T> getObjectFronMinecraftKey;
++    public final Consumer<NextTickListEntry<T>> tickFunction;
+ 
+     private final co.aikar.timings.Timing timingCleanup; // Paper
+     private final co.aikar.timings.Timing timingTicking; // Paper
+@@ -55,27 +55,27 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+ 
+     // note: remove ops / add ops suck on fastutil, a chained hashtable implementation would work better, but Long...
+     // try to alleviate with a very small load factor
+-    private final Long2ObjectOpenHashMap<ArrayList<NextTickListEntry<T>>> entriesByBlock = new Long2ObjectOpenHashMap<>(1024, 0.25f);
+-    private final Long2ObjectOpenHashMap<ObjectRBTreeSet<NextTickListEntry<T>>> entriesByChunk = new Long2ObjectOpenHashMap<>(1024, 0.25f);
+-    private final Long2ObjectOpenHashMap<ArrayList<NextTickListEntry<T>>> pendingChunkTickLoad = new Long2ObjectOpenHashMap<>(1024, 0.5f);
++    public final Long2ObjectOpenHashMap<ArrayList<NextTickListEntry<T>>> entriesByBlock = new Long2ObjectOpenHashMap<>(1024, 0.25f);
++    public final Long2ObjectOpenHashMap<ObjectRBTreeSet<NextTickListEntry<T>>> entriesByChunk = new Long2ObjectOpenHashMap<>(1024, 0.25f);
++    public final Long2ObjectOpenHashMap<ArrayList<NextTickListEntry<T>>> pendingChunkTickLoad = new Long2ObjectOpenHashMap<>(1024, 0.5f);
+ 
+     // fastutil has O(1) first/last while TreeMap/TreeSet are log(n)
+-    private final ObjectRBTreeSet<NextTickListEntry<T>> longScheduled = new ObjectRBTreeSet<>(TickListServerInterval.ENTRY_COMPARATOR);
++    public final ObjectRBTreeSet<NextTickListEntry<T>> longScheduled = new ObjectRBTreeSet<>(TickListServerInterval.ENTRY_COMPARATOR);
+ 
+-    private final ArrayDeque<NextTickListEntry<T>> toTickThisTick = new ArrayDeque<>();
++    public final ArrayDeque<NextTickListEntry<T>> toTickThisTick = new ArrayDeque<>();
+ 
+-    private final TickListServerInterval<T>[] shortScheduled = new TickListServerInterval[SHORT_SCHEDULE_TICK_THRESHOLD];
++    public final TickListServerInterval<T>[] shortScheduled = new TickListServerInterval[SHORT_SCHEDULE_TICK_THRESHOLD];
+     {
+         for (int i = 0, len = this.shortScheduled.length; i < len; ++i) {
+             this.shortScheduled[i] = new TickListServerInterval<>();
+         }
+     }
+-    private int shortScheduledIndex;
++    public int shortScheduledIndex;
+ 
+-    private long nextTick;
++    public long nextTick;
+ 
+-    private static final boolean WARN_ON_EXCESSIVE_DELAY = Boolean.getBoolean("paper.ticklist-warn-on-excessive-delay");
+-    private static final long EXCESSIVE_DELAY_THRESHOLD = Long.getLong("paper.ticklist-excessive-delay-threshold", 60 * 20).longValue(); // 1 min dfl
++    public static final boolean WARN_ON_EXCESSIVE_DELAY = Boolean.getBoolean("paper.ticklist-warn-on-excessive-delay");
++    public static final long EXCESSIVE_DELAY_THRESHOLD = Long.getLong("paper.ticklist-excessive-delay-threshold", 60 * 20).longValue(); // 1 min dfl
+ 
+     // assume index < length
+     private static int getWrappedIndex(final int start, final int length, final int index) {
+@@ -83,7 +83,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+         return next < length ? next : next - length;
+     }
+ 
+-    private static int getNextIndex(final int curr, final int length) {
++    public static int getNextIndex(final int curr, final int length) {
+         final int next = curr + 1;
+         return next < length ? next : 0;
+     }
+@@ -114,7 +114,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+         }
+     }
+ 
+-    private void addToNotTickingReady(final NextTickListEntry<T> entry) {
++    public void addToNotTickingReady(final NextTickListEntry<T> entry) {
+         this.pendingChunkTickLoad.computeIfAbsent(MCUtil.getCoordinateKey(entry.getPosition()), (long keyInMap) -> {
+             return new ArrayList<>();
+         }).add(entry);
+@@ -202,7 +202,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+         }
+     }
+ 
+-    private void prepare() {
++    public void prepare() {
+         final long currentTick = this.world.getTime();
+ 
+         final ChunkProviderServer chunkProvider = this.world.getChunkProvider();
+@@ -333,7 +333,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+         this.timingFinished.stopTiming();
+     }
+ 
+-    private void onTickEnd(final NextTickListEntry<T> entry) {
++    public void onTickEnd(final NextTickListEntry<T> entry) {
+         if (entry.tickState == STATE_CANCELLED_TICK) {
+             return;
+         }
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..35cc88e9b4258ee6078bd0b336758cc2e1506888
+index 0000000000000000000000000000000000000000..cdf032102a4f4d7aa76c92147ca4938bc2910e53
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
-@@ -0,0 +1,107 @@
+@@ -0,0 +1,91 @@
 +package com.tuinity.tuinity;
 +
++import com.destroystokyo.paper.server.ticklist.PaperTickList;
 +import net.minecraft.server.*;
 +
 +import java.util.Iterator;
@@ -27,85 +126,7 @@ index 0000000000000000000000000000000000000000..35cc88e9b4258ee6078bd0b336758cc2
 +    public void run() {
 +        while(true){
 +            if (allowedTick > ticked){
-+                //WorldServer.LOGGER.warn("Inner per_AsyncEntityFluid "+ticked);
-+                int i;
-+                synchronized (self.getFluidTickList().nextTickList){
-+                    i = self.getFluidTickList().nextTickList.size();
-+                }
-+                WorldServer.LOGGER.warn("Inner per_AsyncEntityFluid "+i);
-+                if (false) { // CraftBukkit
-+                    throw new IllegalStateException("TickNextTick list out of sync");
-+                } else {
-+                    if (i > 65536) {
-+                        // CraftBukkit start - If the server has too much to process over time, try to alleviate that
-+                        if (i > 20 * 65536) {
-+                            i = i / 20;
-+                        } else {
-+                            i = 65536;
-+                        }
-+                        // CraftBukkit end
-+                    }
-+                    ChunkProviderServer chunkproviderserver;
-+                    Iterator<NextTickListEntry<FluidType>> iterator;
-+                    synchronized (self.getFluidTickList()) {
-+                        chunkproviderserver = self.getFluidTickList().f.getChunkProvider();
-+                        iterator = self.getFluidTickList().nextTickList.iterator();
-+                    }
-+                    //self.f.getMethodProfiler().enter("cleaning");
-+
-+                    //this.timingCleanup.startTiming(); // Paper
-+                    NextTickListEntry nextticklistentry;
-+
-+                    while (i > 0 && iterator.hasNext()) {
-+                        WorldServer.LOGGER.warn("Inner iterator");
-+                        nextticklistentry = (NextTickListEntry) iterator.next();
-+                        synchronized (self.getFluidTickList()) {
-+                            if (nextticklistentry.b > self.getFluidTickList().f.getTime()) {
-+                                break;
-+                            }
-+                            if (chunkproviderserver.a(nextticklistentry.a)) {
-+                                iterator.remove();
-+                                self.getFluidTickList().nextTickListHash.remove(nextticklistentry);
-+                                self.getFluidTickList().g.add(nextticklistentry);
-+                                --i;
-+                            }
-+                        }
-+                    }
-+                    //this.timingCleanup.stopTiming(); // Paper
-+
-+                    //this.timingTicking.startTiming(); // Paper
-+                    //self.f.getMethodProfiler().exitEnter("ticking");
-+
-+                    while ((nextticklistentry = (NextTickListEntry) self.getFluidTickList().g.poll()) != null) {
-+                        if (chunkproviderserver.a(nextticklistentry.a)) {
-+                            WorldServer.LOGGER.warn("Inner ticking ready");
-+                            try {
-+                                synchronized (self.getFluidTickList()) {
-+                                    self.getFluidTickList().h.add(nextticklistentry);
-+                                    self.getFluidTickList().i.accept(nextticklistentry);
-+                                }
-+                            } catch (Throwable throwable) {
-+                                CrashReport crashreport = CrashReport.a(throwable, "Exception while ticking");
-+                                CrashReportSystemDetails crashreportsystemdetails = crashreport.a("Block being ticked");
-+
-+                                CrashReportSystemDetails.a(crashreportsystemdetails, nextticklistentry.a, (IBlockData) null);
-+                                throw new ReportedException(crashreport);
-+                            }
-+                        } else {
-+                            WorldServer.LOGGER.warn("Inner NOT ticking ready");
-+                            synchronized (self.getFluidTickList()) {
-+                                self.getFluidTickList().a(nextticklistentry.a, (FluidType) nextticklistentry.b(), 0); // CraftBukkit - decompile error
-+                            }
-+                        }
-+                    }
-+                    WorldServer.LOGGER.warn("out");
-+                    //self.f.getMethodProfiler().exit();
-+                    //this.timingTicking.stopTiming(); // Paper
-+                    synchronized (self.getFluidTickList()) {
-+                        self.getFluidTickList().h.clear();
-+                        self.getFluidTickList().g.clear();
-+                    }
-+                }
++                this.tick();
 +                ticked++;
 +            }else{
 +                try {Thread.sleep(10);} catch (InterruptedException e) {e.printStackTrace();}
@@ -114,7 +135,68 @@ index 0000000000000000000000000000000000000000..35cc88e9b4258ee6078bd0b336758cc2
 +    }
 +
 +    public void tick() {
++        PaperTickList<FluidType> dis=(PaperTickList<FluidType>)self.getFluidTickList();
++        //com.tuinity.tuinity.util.TickThread.softEnsureTickThread("async tick list tick"); // Tuinity - soft async catcher
++        final ChunkProviderServer chunkProvider = dis.world.getChunkProvider();
 +
++        dis.world.getMethodProfiler().enter("cleaning");
++        //this.timingCleanup.startTiming();
++
++        dis.prepare();
++
++        // this must be done here in case something schedules in the tick code
++        dis.shortScheduled[dis.shortScheduledIndex].clear();
++        dis.shortScheduledIndex = dis.getNextIndex(dis.shortScheduledIndex, dis.SHORT_SCHEDULE_TICK_THRESHOLD);
++        dis.nextTick = dis.world.getTime() + 1;
++
++        //this.timingCleanup.stopTiming();
++        //this.world.getMethodProfiler().exitEnter("ticking");
++        //this.timingTicking.startTiming();
++
++        for (final NextTickListEntry<FluidType> toTick : dis.toTickThisTick) {
++            if (toTick.tickState != dis.STATE_PENDING_TICK) {
++                // onTickEnd gets called at end of tick
++                continue;
++            }
++            try {
++                if (chunkProvider.isTickingReadyMainThread(toTick.getPosition())) {
++                    toTick.tickState = dis.STATE_TICKING;
++                    dis.tickFunction.accept(toTick);
++                    if (toTick.tickState == dis.STATE_TICKING) {
++                        toTick.tickState = dis.STATE_TICKED;
++                    } // else it's STATE_CANCELLED_TICK
++                    MinecraftServer.getServer().executeMidTickTasks(); // Tuinity - exec chunk tasks during world tick
++                } else {
++                    // re-schedule eventually
++                    toTick.tickState = dis.STATE_SCHEDULED;
++                    dis.addToNotTickingReady(toTick);
++                }
++            } catch (final Throwable thr) {
++                // start copy from TickListServer // TODO check on update
++                CrashReport crashreport = CrashReport.a(thr, "Exception while ticking");
++                CrashReportSystemDetails crashreportsystemdetails = crashreport.a("Block being ticked");
++
++                CrashReportSystemDetails.a(crashreportsystemdetails, toTick.getPosition(), (IBlockData) null);
++                throw new ReportedException(crashreport);
++                // end copy from TickListServer
++            }
++        }
++
++        //this.timingTicking.stopTiming();
++        //this.world.getMethodProfiler().exit();
++        //this.timingFinished.startTiming();
++
++        // finished ticking, actual cleanup time
++        for (int i = 0, len = dis.toTickThisTick.size(); i < len; ++i) {
++            final NextTickListEntry<FluidType> entry = dis.toTickThisTick.poll();
++            if (entry.tickState != dis.STATE_SCHEDULED) {
++                // some entries get re-scheduled due to their chunk not being loaded/at correct status, so do not
++                // call onTickEnd for them
++                dis.onTickEnd(entry);
++            }
++        }
++
++        //this.timingFinished.stopTiming();
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/FluidTypeFlowing.java b/src/main/java/net/minecraft/server/FluidTypeFlowing.java
@@ -139,7 +221,7 @@ index 376dca1889f1eca4ce9993e0e067a94eb293103d..cef79981a8256ff190e47424b2af5c6b
  
          }
 diff --git a/src/main/java/net/minecraft/server/TickListServer.java b/src/main/java/net/minecraft/server/TickListServer.java
-index 3f1aa5ced697490b5481ba992cf5af5dc98b8166..1288cdf4723baa455a566d7ff7cf46c8c18190ae 100644
+index 3f1aa5ced697490b5481ba992cf5af5dc98b8166..ba5460963aa5e990762d6e6cb411bb5ee0faf4ee 100644
 --- a/src/main/java/net/minecraft/server/TickListServer.java
 +++ b/src/main/java/net/minecraft/server/TickListServer.java
 @@ -21,12 +21,12 @@ public class TickListServer<T> implements TickList<T> {
@@ -161,7 +243,13 @@ index 3f1aa5ced697490b5481ba992cf5af5dc98b8166..1288cdf4723baa455a566d7ff7cf46c8
  
      public TickListServer(WorldServer worldserver, Predicate<T> predicate, Function<T, MinecraftKey> function, Function<MinecraftKey, T> function1, Consumer<NextTickListEntry<T>> consumer, String timingsType) { // Paper
          this.a = predicate;
-@@ -272,7 +272,6 @@ public class TickListServer<T> implements TickList<T> {
+@@ -267,12 +267,11 @@ public class TickListServer<T> implements TickList<T> {
+ 
+     }
+ 
+-    private void a(NextTickListEntry<T> nextticklistentry) {
++    synchronized private void a(NextTickListEntry<T> nextticklistentry) {
+         if (!this.nextTickListHash.contains(nextticklistentry)) {
              this.nextTickListHash.add(nextticklistentry);
              this.nextTickList.add(nextticklistentry);
          }
@@ -170,7 +258,7 @@ index 3f1aa5ced697490b5481ba992cf5af5dc98b8166..1288cdf4723baa455a566d7ff7cf46c8
  
      public int a() {
 diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
-index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..226f930a72ffdab290241d0adecb3147ed58bdca 100644
+index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..a46ab1cbfefa0691d475301935440056b1b3a5f5 100644
 --- a/src/main/java/net/minecraft/server/WorldServer.java
 +++ b/src/main/java/net/minecraft/server/WorldServer.java
 @@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
@@ -208,7 +296,16 @@ index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..226f930a72ffdab290241d0adecb3147
      @Nullable
      private final MobSpawnerTrader mobSpawnerTrader;
  
-@@ -449,7 +453,13 @@ public class WorldServer extends World {
+@@ -181,7 +185,7 @@ public class WorldServer extends World {
+     // Paper end
+ 
+     // Paper start - rewrite ticklistserver
+-    void onChunkSetTicking(int chunkX, int chunkZ) {
++    synchronized void onChunkSetTicking(int chunkX, int chunkZ) {
+         ((com.destroystokyo.paper.server.ticklist.PaperTickList)this.nextTickListBlock).onChunkSetTicking(chunkX, chunkZ);
+         ((com.destroystokyo.paper.server.ticklist.PaperTickList)this.nextTickListFluid).onChunkSetTicking(chunkX, chunkZ);
+     }
+@@ -449,7 +453,15 @@ public class WorldServer extends World {
          timings.scheduledBlocks.startTiming(); // Spigot
          if (this.worldData.getType() != WorldType.DEBUG_ALL_BLOCK_STATES) {
              this.nextTickListBlock.b();
@@ -218,8 +315,19 @@ index 4f8c2de9e7e5f3e78dfb5728ff9a137158b2fc01..226f930a72ffdab290241d0adecb3147
 +                asyncFluid=new AsyncFluid(this);
 +                new Thread(asyncFluid).start();
 +            }
++            //int j = getFluidTickList().nextTickList.size();
++            //WorldServer.LOGGER.warn("Inner per_AsyncEntityFluidAAA "+j);
 +            //this.nextTickListFluid.b();
 +            asyncFluid.allowedTick++;
          }
          timings.scheduledBlocks.stopTiming(); // Spigot
+ 
+@@ -1754,7 +1766,7 @@ public class WorldServer extends World {
+     }
+ 
+     @Override
+-    public TickListServer<FluidType> getFluidTickList() {
++    synchronized public TickListServer<FluidType> getFluidTickList() {
+         return this.nextTickListFluid;
+     }
  
