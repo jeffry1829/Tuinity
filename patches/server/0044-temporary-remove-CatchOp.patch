@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jeffry1829 <jeffry1829@gmail.com>
+Date: Fri, 1 May 2020 12:24:42 +0800
+Subject: [PATCH] temporary remove CatchOp
+
+
+diff --git a/src/main/java/org/spigotmc/AsyncCatcher.java b/src/main/java/org/spigotmc/AsyncCatcher.java
+index c3ac1a46c3e06bfe06ad9ff9f4ec49c055a790b0..0bf681d7f326a9c589bce6bb6c920770e2c166f9 100644
+--- a/src/main/java/org/spigotmc/AsyncCatcher.java
++++ b/src/main/java/org/spigotmc/AsyncCatcher.java
+@@ -10,9 +10,9 @@ public class AsyncCatcher
+ 
+     public static void catchOp(String reason)
+     {
+-        if ( ( enabled || com.tuinity.tuinity.util.TickThread.STRICT_THREAD_CHECKS ) && !org.bukkit.Bukkit.isPrimaryThread() ) // Tuinity
+-        {
+-            throw new IllegalStateException( "Asynchronous " + reason + "!" );
+-        }
++        //if ( ( enabled || com.tuinity.tuinity.util.TickThread.STRICT_THREAD_CHECKS ) && !org.bukkit.Bukkit.isPrimaryThread() ) // Tuinity
++        //{
++        //    throw new IllegalStateException( "Asynchronous " + reason + "!" );
++        //}
+     }
+ }
