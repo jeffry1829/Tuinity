@@ -104,10 +104,10 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..4ca62d132792ba108a9aa53cd2bc093f
          }
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..cdf032102a4f4d7aa76c92147ca4938bc2910e53
+index 0000000000000000000000000000000000000000..fffe3243f122d7afcc3f9e377bcf824fb7d93aeb
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,93 @@
 +package com.tuinity.tuinity;
 +
 +import com.destroystokyo.paper.server.ticklist.PaperTickList;
@@ -139,7 +139,7 @@ index 0000000000000000000000000000000000000000..cdf032102a4f4d7aa76c92147ca4938b
 +        //com.tuinity.tuinity.util.TickThread.softEnsureTickThread("async tick list tick"); // Tuinity - soft async catcher
 +        final ChunkProviderServer chunkProvider = dis.world.getChunkProvider();
 +
-+        dis.world.getMethodProfiler().enter("cleaning");
++        //dis.world.getMethodProfiler().enter("cleaning");
 +        //this.timingCleanup.startTiming();
 +
 +        dis.prepare();
@@ -153,6 +153,8 @@ index 0000000000000000000000000000000000000000..cdf032102a4f4d7aa76c92147ca4938b
 +        //this.world.getMethodProfiler().exitEnter("ticking");
 +        //this.timingTicking.startTiming();
 +
++        WorldServer.LOGGER.warn("dis.toTickThisTick.size() "+dis.toTickThisTick.size());
++
 +        for (final NextTickListEntry<FluidType> toTick : dis.toTickThisTick) {
 +            if (toTick.tickState != dis.STATE_PENDING_TICK) {
 +                // onTickEnd gets called at end of tick
@@ -165,7 +167,7 @@ index 0000000000000000000000000000000000000000..cdf032102a4f4d7aa76c92147ca4938b
 +                    if (toTick.tickState == dis.STATE_TICKING) {
 +                        toTick.tickState = dis.STATE_TICKED;
 +                    } // else it's STATE_CANCELLED_TICK
-+                    MinecraftServer.getServer().executeMidTickTasks(); // Tuinity - exec chunk tasks during world tick
++                    //MinecraftServer.getServer().executeMidTickTasks(); // Tuinity - exec chunk tasks during world tick
 +                } else {
 +                    // re-schedule eventually
 +                    toTick.tickState = dis.STATE_SCHEDULED;

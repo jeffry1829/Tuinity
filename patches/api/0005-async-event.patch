@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jeffry1829 <jeffry1829@gmail.com>
+Date: Wed, 29 Apr 2020 21:34:57 +0800
+Subject: [PATCH] async water
+
+
+diff --git a/src/main/java/org/bukkit/event/block/BlockEvent.java b/src/main/java/org/bukkit/event/block/BlockEvent.java
+index 62a4d13453e5430020933471efa938ceb689baaa..2a74a926101c976122dc0e07a991e0721e5f5edd 100644
+--- a/src/main/java/org/bukkit/event/block/BlockEvent.java
++++ b/src/main/java/org/bukkit/event/block/BlockEvent.java
+@@ -14,6 +14,11 @@ public abstract class BlockEvent extends Event {
+         block = theBlock;
+     }
+ 
++    public BlockEvent(@NotNull final Block theBlock, boolean isAsync) {
++        super(isAsync);
++        block = theBlock;
++    }
++
+     /**
+      * Gets the block involved in this event.
+      *
+diff --git a/src/main/java/org/bukkit/event/block/BlockFromToEvent.java b/src/main/java/org/bukkit/event/block/BlockFromToEvent.java
+index 1af39280568e8da784ea8d584b7e3fcca2ee60b5..f38ca59c7d6fd43e92657b79b74223024a0bb92b 100644
+--- a/src/main/java/org/bukkit/event/block/BlockFromToEvent.java
++++ b/src/main/java/org/bukkit/event/block/BlockFromToEvent.java
+@@ -20,7 +20,7 @@ public class BlockFromToEvent extends BlockEvent implements Cancellable {
+     protected boolean cancel;
+ 
+     public BlockFromToEvent(@NotNull final Block block, @NotNull final BlockFace face) {
+-        super(block);
++        super(block,true);
+         this.face = face;
+         this.cancel = false;
+     }
+diff --git a/src/main/java/org/bukkit/event/block/FluidLevelChangeEvent.java b/src/main/java/org/bukkit/event/block/FluidLevelChangeEvent.java
+index 9bd0440c3776c0b73c6eb11274070b11d0ade856..e9691582d9d80ce6de919dcbc21802fd4f754f7e 100644
+--- a/src/main/java/org/bukkit/event/block/FluidLevelChangeEvent.java
++++ b/src/main/java/org/bukkit/event/block/FluidLevelChangeEvent.java
+@@ -19,7 +19,7 @@ public class FluidLevelChangeEvent extends BlockEvent implements Cancellable {
+     private BlockData newData;
+ 
+     public FluidLevelChangeEvent(@NotNull Block theBlock, @NotNull BlockData newData) {
+-        super(theBlock);
++        super(theBlock,true);
+         this.newData = newData;
+     }
+ 
