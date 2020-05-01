@@ -5,7 +5,7 @@ Subject: [PATCH] async water
 
 
 diff --git a/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java b/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
-index a08bfb4b3b02e998d3a6f519107e522fc58496eb..9e6493008fe9fa0bacb670900a89712715fac755 100644
+index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa81d776fb 100644
 --- a/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
 +++ b/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
 @@ -41,13 +41,13 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
@@ -97,7 +97,7 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..9e6493008fe9fa0bacb670900a897127
                  }
              }
          }
-+        WorldServer.LOGGER.warn("this.toTickThisTick.size() in PaperTickList "+this.toTickThisTick.size());
++        if(this.toTickThisTick.size()!=0)WorldServer.LOGGER.warn("this.toTickThisTick.size() in PaperTickList "+this.toTickThisTick.size());
      }
  
      @Override
@@ -112,10 +112,10 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..9e6493008fe9fa0bacb670900a897127
          }
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..99eef72b0548ed43502a3ea1c4971f6fd8be309a
+index 0000000000000000000000000000000000000000..dddd2c793fdef35cfe0dd5966e36b26e7f3f243a
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,97 @@
 +package com.tuinity.tuinity;
 +
 +import com.destroystokyo.paper.server.ticklist.PaperTickList;
@@ -134,10 +134,16 @@ index 0000000000000000000000000000000000000000..99eef72b0548ed43502a3ea1c4971f6f
 +    public void run() {
 +        while(true){
 +            if (allowedTick > ticked){
-+                this.tick();
-+                ticked++;
++                try {
++                    this.tick();
++                    ticked++;
++                }catch (Exception e){
++                    e.printStackTrace();
++                }
 +            }else{
-+                try {Thread.sleep(10);} catch (InterruptedException e) {e.printStackTrace();}
++                try {Thread.sleep(10);} catch (InterruptedException e) {
++                    e.printStackTrace();
++                }
 +            }
 +        }
 +    }
@@ -159,7 +165,7 @@ index 0000000000000000000000000000000000000000..99eef72b0548ed43502a3ea1c4971f6f
 +        //this.world.getMethodProfiler().exitEnter("ticking");
 +        //this.timingTicking.startTiming();
 +
-+        WorldServer.LOGGER.warn("dis.toTickThisTick.size() "+dis.toTickThisTick.size());
++        if(dis.toTickThisTick.size()!=0)WorldServer.LOGGER.warn("dis.toTickThisTick.size() "+dis.toTickThisTick.size());
 +
 +        for (final NextTickListEntry<FluidType> toTick : dis.toTickThisTick) {
 +            if (toTick.tickState != dis.STATE_PENDING_TICK) {
