@@ -1,18 +1,18 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: jeffry1829 <jeffry1829@gmail.com>
-Date: Wed, 29 Apr 2020 21:34:57 +0800
-Subject: [PATCH] async water
+Date: Fri, 1 May 2020 12:15:57 +0800
+Subject: [PATCH] async event
 
 
 diff --git a/src/main/java/org/bukkit/event/block/BlockEvent.java b/src/main/java/org/bukkit/event/block/BlockEvent.java
-index 62a4d13453e5430020933471efa938ceb689baaa..2a74a926101c976122dc0e07a991e0721e5f5edd 100644
+index 62a4d13453e5430020933471efa938ceb689baaa..38eb19a0c5a569aedfd0a0723f92c687758c545c 100644
 --- a/src/main/java/org/bukkit/event/block/BlockEvent.java
 +++ b/src/main/java/org/bukkit/event/block/BlockEvent.java
 @@ -14,6 +14,11 @@ public abstract class BlockEvent extends Event {
          block = theBlock;
      }
  
-+    public BlockEvent(@NotNull final Block theBlock, boolean isAsync) {
++    public BlockEvent(@NotNull final Block theBlock,boolean isAsync) {
 +        super(isAsync);
 +        block = theBlock;
 +    }
