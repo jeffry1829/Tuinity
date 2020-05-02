@@ -167,10 +167,10 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..e25de3a421ff68f52c13b793eb2e8b9c
          // not at ticking status, and ticking status requires neighbours loaded
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..9269edaefd0272697b277fa6663ba29f93a0229d
+index 0000000000000000000000000000000000000000..86b3a1d2ffd368ba1a6a5e95fe2f047e9889efa3
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,100 @@
 +package com.tuinity.tuinity;
 +
 +import com.destroystokyo.paper.server.ticklist.PaperTickList;
@@ -190,8 +190,11 @@ index 0000000000000000000000000000000000000000..9269edaefd0272697b277fa6663ba29f
 +        while(true){
 +            if (allowedTick > ticked){
 +                try {
++                    long start = System.currentTimeMillis();
 +                    this.tick();
 +                    ticked++;
++                    long end = System.currentTimeMillis();
++                    WorldServer.LOGGER.warn("tick() time elapsed: "+(end - start) / 1000F);
 +                }catch (Exception e){
 +                    e.printStackTrace();
 +                }
@@ -210,11 +213,7 @@ index 0000000000000000000000000000000000000000..9269edaefd0272697b277fa6663ba29f
 +
 +        //dis.world.getMethodProfiler().enter("cleaning");
 +        //this.timingCleanup.startTiming();
-+        try{
-+            dis.prepare();
-+        }catch(Exception e){
-+            e.printStackTrace();
-+        }
++        dis.prepare();
 +        // this must be done here in case something schedules in the tick code
 +        dis.shortScheduled[dis.shortScheduledIndex].clear();
 +        dis.shortScheduledIndex = dis.getNextIndex(dis.shortScheduledIndex, dis.SHORT_SCHEDULE_TICK_THRESHOLD);
