@@ -5,10 +5,38 @@ Subject: [PATCH] async water
 
 
 diff --git a/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java b/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
-index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa81d776fb 100644
+index a08bfb4b3b02e998d3a6f519107e522fc58496eb..e25de3a421ff68f52c13b793eb2e8b9cf2e0b52d 100644
 --- a/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
 +++ b/src/main/java/com/destroystokyo/paper/server/ticklist/PaperTickList.java
-@@ -41,13 +41,13 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+@@ -1,25 +1,10 @@
+ package com.destroystokyo.paper.server.ticklist;
+ 
+-import net.minecraft.server.MCUtil;
+-import net.minecraft.server.MinecraftServer;
++import net.minecraft.server.*;
+ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+ import it.unimi.dsi.fastutil.objects.ObjectRBTreeSet;
+-import net.minecraft.server.BaseBlockPosition;
+-import net.minecraft.server.BlockPosition;
+-import net.minecraft.server.ChunkCoordIntPair;
+-import net.minecraft.server.ChunkProviderServer;
+-import net.minecraft.server.CrashReport;
+-import net.minecraft.server.CrashReportSystemDetails;
+-import net.minecraft.server.IBlockData;
+-import net.minecraft.server.MinecraftKey;
+-import net.minecraft.server.NBTTagList;
+-import net.minecraft.server.NextTickListEntry;
+-import net.minecraft.server.ReportedException;
+-import net.minecraft.server.StructureBoundingBox;
+-import net.minecraft.server.TickListPriority;
+-import net.minecraft.server.TickListServer;
+-import net.minecraft.server.WorldServer;
++
+ import java.util.ArrayDeque;
+ import java.util.ArrayList;
+ import java.util.Collections;
+@@ -41,13 +26,13 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
      public static final int STATE_TICKED         = 1 << 4; // after this, it gets thrown back to unscheduled
      public static final int STATE_CANCELLED_TICK = 1 << 5; // still gets moved to unscheduled after tick
  
@@ -28,7 +56,7 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa
  
      private final co.aikar.timings.Timing timingCleanup; // Paper
      private final co.aikar.timings.Timing timingTicking; // Paper
-@@ -55,27 +55,27 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+@@ -55,27 +40,27 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
  
      // note: remove ops / add ops suck on fastutil, a chained hashtable implementation would work better, but Long...
      // try to alleviate with a very small load factor
@@ -66,7 +94,7 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa
  
      // assume index < length
      private static int getWrappedIndex(final int start, final int length, final int index) {
-@@ -83,7 +83,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+@@ -83,7 +68,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
          return next < length ? next : next - length;
      }
  
@@ -75,7 +103,7 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa
          final int next = curr + 1;
          return next < length ? next : 0;
      }
-@@ -114,7 +114,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+@@ -114,7 +99,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
          }
      }
  
@@ -84,16 +112,34 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa
          this.pendingChunkTickLoad.computeIfAbsent(MCUtil.getCoordinateKey(entry.getPosition()), (long keyInMap) -> {
              return new ArrayList<>();
          }).add(entry);
-@@ -202,7 +202,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+@@ -134,7 +119,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+         }
+     }
+ 
+-    private void removeEntry(final NextTickListEntry<T> entry) {
++    synchronized private void removeEntry(final NextTickListEntry<T> entry) {
+         entry.tickState = STATE_CANCELLED_TICK;
+         // short/long scheduled will skip the entry
+ 
+@@ -202,7 +187,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
          }
      }
  
 -    private void prepare() {
-+    public void prepare() {
++    synchronized public void prepare() {
          final long currentTick = this.world.getTime();
  
          final ChunkProviderServer chunkProvider = this.world.getChunkProvider();
-@@ -266,6 +266,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+@@ -213,7 +198,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+         // this tick
+         if (this.longScheduled.isEmpty() || this.longScheduled.first().getTargetTick() > currentTick) {
+             // nothing in longScheduled to worry about
+-            final TickListServerInterval<T> interval = this.shortScheduled[this.shortScheduledIndex];
++            final TickListServerInterval<T> interval =  this.shortScheduled[this.shortScheduledIndex];
+             for (int i = 0, len = interval.byPriority.length; i < len; ++i) {
+                 for (final Iterator<NextTickListEntry<T>> iterator = interval.byPriority[i].iterator(); iterator.hasNext();) {
+                     this.queueEntryForTick(iterator.next(), chunkProvider);
+@@ -266,6 +251,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
                  }
              }
          }
@@ -101,7 +147,7 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa
      }
  
      @Override
-@@ -333,7 +334,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+@@ -333,7 +319,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
          this.timingFinished.stopTiming();
      }
  
@@ -110,12 +156,21 @@ index a08bfb4b3b02e998d3a6f519107e522fc58496eb..1b4ad1713ef51154cba63b5cf6f6f2aa
          if (entry.tickState == STATE_CANCELLED_TICK) {
              return;
          }
+@@ -553,7 +539,7 @@ public final class PaperTickList<T> extends TickListServer<T> { // extend to avo
+     }
+ 
+     @Override
+-    public List<NextTickListEntry<T>> getEntriesInChunk(ChunkCoordIntPair chunkPos, boolean removeReturned, boolean excludeTicked) {
++    synchronized public List<NextTickListEntry<T>> getEntriesInChunk(ChunkCoordIntPair chunkPos, boolean removeReturned, boolean excludeTicked) {
+         com.tuinity.tuinity.util.TickThread.softEnsureTickThread("async tick list get"); // Tuinity - soft async catcher
+         // Vanilla DOES get the entries 2 blocks out of the chunk too, but that doesn't matter since we ignore chunks
+         // not at ticking status, and ticking status requires neighbours loaded
 diff --git a/src/main/java/com/tuinity/tuinity/AsyncFluid.java b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..dddd2c793fdef35cfe0dd5966e36b26e7f3f243a
+index 0000000000000000000000000000000000000000..9269edaefd0272697b277fa6663ba29f93a0229d
 --- /dev/null
 +++ b/src/main/java/com/tuinity/tuinity/AsyncFluid.java
-@@ -0,0 +1,97 @@
+@@ -0,0 +1,101 @@
 +package com.tuinity.tuinity;
 +
 +import com.destroystokyo.paper.server.ticklist.PaperTickList;
@@ -155,7 +210,11 @@ index 0000000000000000000000000000000000000000..dddd2c793fdef35cfe0dd5966e36b26e
 +
 +        //dis.world.getMethodProfiler().enter("cleaning");
 +        //this.timingCleanup.startTiming();
-+        dis.prepare();
++        try{
++            dis.prepare();
++        }catch(Exception e){
++            e.printStackTrace();
++        }
 +        // this must be done here in case something schedules in the tick code
 +        dis.shortScheduled[dis.shortScheduledIndex].clear();
 +        dis.shortScheduledIndex = dis.getNextIndex(dis.shortScheduledIndex, dis.SHORT_SCHEDULE_TICK_THRESHOLD);

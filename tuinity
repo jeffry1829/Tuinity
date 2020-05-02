@@ -74,9 +74,12 @@ case "$1" in
        fi
        ./scripts/apply.sh "$basedir"
        cd "$basedir"
-       mvn -N install -DskipTests=true
+       mvn -T 1.5C -N install -DskipTests=true
        cd ${FORK_NAME}-API
-       mvn -e clean install -DskipTests=true && cd ../${FORK_NAME}-Server && mvn -e clean install -DskipTests=true
+       if [ "$3" != "api" ]; then
+          mvn -T 1.5C -e clean install -DskipTests=true
+       fi
+       cd ../${FORK_NAME}-Server && mvn -T 1.5C -e clean install -DskipTests=true
        cd "$basedir"
        ./scripts/paperclip.sh
     )

@@ -91,7 +91,8 @@ import Blocks
 
 ### Some script things
 ```
-./tuinity FASTjar fast
+./tuinity FASTjar fast api 此指令可以快速地build, 且會build Tuinity-API
+./tuinity FASTjar fast 快速地build, 且會略過 build Tuinity-API
 ```
 
 ### Manual method (Edit patch)
@@ -125,14 +126,13 @@ exactly what the above slightly automated system does.
 ^ 新的PaperTickList<T>物件，傳入判斷fluid是否要加入tickList的Predicate和如何tick的Consumer
 ，PaperTickList<T>本身有tick()函式，PaperTickList<T> extends TickListServer<T>
 3. this.nextTickListFluid.b();
-^ 此行出現在WorldServer#doTick裡，已經有分離Fluid和一般Block的Tick了。b()只是tick()的混淆
-注意：PaperTickList裡並沒有b()函式
-定義：TickListServer<FluidType> nextTickListFluid;
+^ 此行出現在WorldServer#doTick裡，已經有分離Fluid和一般Block的Tick了。b()只是拿來呼叫PaperTickList#tick()的Overload
 4. ((com.destroystokyo.paper.server.ticklist.PaperTickList)this.nextTickListFluid).onChunkSetTicking(chunkX, chunkZ);
 ^ Paper看來已經重寫過ticklist server到PaperTickList裡了。
 注意：onChunkSetTicking內有async catcher,但是經過搜尋，似乎FluidTypeFlowing裡面並沒有呼叫
 
-#TickListServer<T>.java
+#TickListServer<T>.java (Watch with caution, We should look at PaperTickList First, 
+then TickListServer, PaperTickList is the rewrite version of TickListServer)
 1. public void schedule(BlockPosition blockposition, T t0, int i, TickListPriority ticklistpriority) {
 ^ 裡面包含了Fluid的Predicate的.test()
 2. private void a(NextTickListEntry<T> nextticklistentry) {
@@ -156,5 +156,5 @@ protected void a(GeneratorAccess generatoraccess, BlockPosition blockposition, F
 ### Code寫法
 Comment掉WorldServer#this.nextTickListFluid.b();
 改為一個counter，給AsyncFluid.java(自定義Class)用。
-AsyncFluid內貼上TickListServer\<T\>的Code
+AsyncFluid內貼上PaperTickList\<T\>的Code
 處理async catcher(把Event改成async event)
