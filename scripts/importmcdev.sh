@@ -97,13 +97,6 @@ done
 ###############################################################################################
 
 # import Foo
-import IWorldInventory
-import Clearable
-import IHopper
-import Material
-import IInventoryHolder
-import MaterialMapColor
-import Blocks
 
 ########################################################
 ########################################################
